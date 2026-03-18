@@ -243,6 +243,88 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 .btn-gmail { background: #fff; color: #333; }
 .btn-line2 { background: #06c755; color: #fff; }
 
+/* ─── MOBILE RWD ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Header: 壓縮成兩行 */
+  header {
+    height: auto; padding: 8px 12px; flex-wrap: wrap; gap: 6px;
+  }
+  .header-center { display: none; }
+  .header-actions { gap: 5px; width: 100%; justify-content: stretch; }
+  .hdr-btn { flex: 1; padding: 8px 6px; font-size: 11px; justify-content: center; }
+
+  /* 整個 app 改成上下排列，可捲動 */
+  .app {
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* 左側設定區：寬度全開，高度自動 */
+  .left-panel {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .left-scroll { max-height: none; overflow-y: visible; padding: 14px; }
+
+  /* 像素間距卡片：一排三個 */
+  .pitch-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .pitch-name { font-size: 13px; }
+
+  /* 尺寸輸入並排 */
+  .size-row { gap: 8px; }
+  .field-input input { font-size: 16px; padding: 9px 8px; }
+
+  /* 系列 tab 字縮小 */
+  .series-btn { font-size: 10px; padding: 7px 3px; }
+  .series-icon { font-size: 13px; }
+
+  /* 右側預覽 */
+  .right-panel { flex: none; width: 100%; }
+  .canvas-wrap {
+    height: 52vw;   /* 螢幕寬的 52%，保持比例感 */
+    min-height: 220px;
+    max-height: 340px;
+  }
+
+  /* 結果列：7欄→ 4欄+換行（剩3欄第二行） */
+  .results-bar { padding: 10px 10px; }
+  .results-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0 0;
+    row-gap: 8px;
+  }
+  .result-item { padding: 0 4px; }
+  .result-item:nth-child(4) { border-right: none; }
+  .r-val { font-size: 13px; }
+  .r-lbl { font-size: 8px; }
+
+  /* Panel footer 聯絡資訊 */
+  .panel-footer { padding: 10px 14px; }
+  .contact-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Modal 全寬 */
+  .modal-box { width: 96vw; max-height: 88vh; }
+  .modal-body { padding: 14px 16px; }
+  .modal-footer { padding: 12px 16px; }
+  .form-row { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* 超小螢幕（iPhone SE 等） */
+@media (max-width: 390px) {
+  .pitch-grid { grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .series-tabs { gap: 3px; }
+  .results-grid { grid-template-columns: repeat(3, 1fr); }
+  .result-item:nth-child(3) { border-right: none; }
+  .result-item:nth-child(4) { border-right: 1px solid var(--border); }
+  .hdr-btn span, .hdr-btn svg { display: none; }
+}
+
 /* ─── PRINT STYLESHEET ───────────────────────────────────────── */
 .print-sheet { display: none; }
 
