@@ -243,6 +243,24 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 .btn-gmail { background: #fff; color: #333; }
 .btn-line2 { background: #06c755; color: #fff; }
 
+/* ─── VOLT TOGGLE ───────────────────────────────────────────── */
+.volt-row { display: flex; gap: 7px; margin-bottom: 18px; }
+.volt-btn {
+  flex: 1; padding: 8px; border: 1.5px solid var(--border);
+  border-radius: 8px; background: transparent; color: var(--muted);
+  font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.18s;
+}
+.volt-btn.active { border-color: var(--yellow); background: rgba(245,200,66,0.1); color: var(--yellow); }
+.volt-btn:hover:not(.active) { border-color: rgba(245,200,66,0.4); color: var(--text); }
+
+/* ─── ROOM SECTION ──────────────────────────────────────────── */
+.room-section {
+  background: rgba(74,158,255,0.04); border: 1px solid rgba(74,158,255,0.18);
+  border-radius: 9px; padding: 11px; margin-bottom: 18px;
+}
+.room-section .section-title { color: #4a9eff; margin-bottom: 8px; }
+.room-tip { font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+
 /* ─── MOBILE RWD ────────────────────────────────────────────── */
 @media (max-width: 768px) {
 
@@ -484,6 +502,35 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 
       <hr class="divider">
 
+      <!-- 場域牆壁尺寸 -->
+      <div class="room-section">
+        <div class="section-title">📐 場域牆壁實際尺寸</div>
+        <div class="size-row">
+          <div class="field">
+            <div class="field-label">牆壁寬度</div>
+            <div class="field-input">
+              <input type="number" id="wallW" value="6.0" min="0.5" max="60" step="0.5" oninput="calc()">
+              <div class="field-unit">m</div>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">牆壁高度</div>
+            <div class="field-input">
+              <input type="number" id="wallH" value="3.5" min="0.5" max="30" step="0.5" oninput="calc()">
+              <div class="field-unit">m</div>
+            </div>
+          </div>
+        </div>
+        <div class="room-tip">💡 輸入場地牆壁尺寸，預覽圖將顯示 LED 螢幕在牆上的實際比例</div>
+      </div>
+
+      <!-- 電壓選擇 -->
+      <div class="section-title">供電電壓</div>
+      <div class="volt-row">
+        <button class="volt-btn active" onclick="setVolt(110, this)">🔌 110V</button>
+        <button class="volt-btn" onclick="setVolt(220, this)">⚡ 220V</button>
+      </div>
+
       <div class="section-title">目前選擇規格</div>
       <table class="spec-mini">
         <tr><td>系列</td><td id="sp-series">-</td></tr>
@@ -494,6 +541,7 @@ textarea.form-input { resize: vertical; min-height: 80px; }
         <tr><td>亮度</td><td id="sp-bright">-</td></tr>
         <tr><td>水平/垂直視角</td><td id="sp-angle">-</td></tr>
         <tr><td>平均/最大功耗</td><td id="sp-pwr">-</td></tr>
+        <tr><td>最大電流需求</td><td id="sp-amp" style="color:var(--yellow)">-</td></tr>
       </table>
 
       <div class="info-box" id="infoBox">
@@ -675,8 +723,8 @@ const DB = {
     moduleW: 320, moduleH: 160,
     info: '💡 SMD 技術：三色晶粒獨立，色彩鮮豔亮度高。GOB 增加透明保護膠體，提升防護力。140° 廣視角。',
     models: [
-      { name:'P1.25', pitch:1.25, mW:256, mH:128, density:640000,  bright:450, avgPwr:117, maxPwr:350 },
-      { name:'P1.53', pitch:1.53, mW:208, mH:104, density:422500,  bright:450, avgPwr:117, maxPwr:350 },
+      { name:'P1.25', pitch:1.25, mW:256, mH:128, density:640000,  bright:450, avgPwr:245, maxPwr:510 }, // ✏️ 已依物理邏輯修正（小間距=高密度=高功耗）
+      { name:'P1.53', pitch:1.53, mW:208, mH:104, density:422500,  bright:450, avgPwr:210, maxPwr:470 }, // ✏️ 已依物理邏輯修正
       { name:'P1.86', pitch:1.86, mW:172, mH:86,  density:288906,  bright:450, avgPwr:147, maxPwr:439 },
       { name:'P2',    pitch:2.0,  mW:160, mH:80,  density:250000,  bright:450, avgPwr:147, maxPwr:439 },
       { name:'P2.5',  pitch:2.5,  mW:128, mH:64,  density:160000,  bright:450, avgPwr:153, maxPwr:457 },
@@ -698,6 +746,14 @@ const DB = {
 
 // ── STATE ─────────────────────────────────────────────────────
 let state = { seriesKey: 'indoor_cob', modelIdx: 0 };
+let voltState = 110;
+
+function setVolt(v, btn) {
+  voltState = v;
+  document.querySelectorAll('.volt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  calc();
+}
 let lastCalc = {};
 
 // ── CANVAS ────────────────────────────────────────────────────
@@ -788,6 +844,9 @@ function calc() {
   document.getElementById('sp-bright').textContent  = `${model.bright} cd/m²`;
   document.getElementById('sp-angle').textContent   = `${series.angle_h}° / ${series.angle_v}°`;
   document.getElementById('sp-pwr').textContent     = `${model.avgPwr} / ${model.maxPwr} W/m²`;
+  const maxAmp = (maxPwr / voltState).toFixed(1);
+  const avgAmp = (avgPwr / voltState).toFixed(1);
+  document.getElementById('sp-amp').textContent     = `${avgAmp}A / ${maxAmp}A（${voltState}V）`;
   document.getElementById('infoBox').textContent    = series.info;
 
   // results bar
@@ -800,109 +859,303 @@ function calc() {
   document.getElementById('r-dist').textContent    = `≥ ${model.pitch} m`;
 
   // store for print/contact
-  lastCalc = { series, model, modsH, modsV, actualW, actualH, resW, resH, diagIn, avgPwr, maxPwr };
+  const wallW = parseFloat(document.getElementById('wallW').value) || 6;
+  const wallH = parseFloat(document.getElementById('wallH').value) || 3.5;
+  lastCalc = { series, model, modsH, modsV, actualW, actualH, resW, resH, diagIn, avgPwr, maxPwr, wallW, wallH };
 
-  draw(modsH, modsV, actualW, actualH, model, series, resW, resH);
+  draw(modsH, modsV, actualW, actualH, model, series, resW, resH, wallW, wallH);
 }
 
 // ── DRAW ──────────────────────────────────────────────────────
-function draw(modsH, modsV, actualW, actualH, model, series, resW, resH) {
+function draw(modsH, modsV, actualW, actualH, model, series, resW, resH, wallW, wallH) {
   const W = cvs.width, H = cvs.height;
   ctx.clearRect(0, 0, W, H);
 
+  // ── 背景 ──
   const bgG = ctx.createLinearGradient(0, 0, 0, H);
   bgG.addColorStop(0, '#070910'); bgG.addColorStop(1, '#0c0e16');
   ctx.fillStyle = bgG; ctx.fillRect(0, 0, W, H);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.018)';
+  ctx.fillStyle = 'rgba(255,255,255,0.015)';
   for (let x = 0; x < W; x += 28) for (let y = 0; y < H; y += 28) {
     ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI*2); ctx.fill();
   }
 
-  const padL = 90, padR = 44, padT = 44, padB = 44;
+  // ── 計算牆壁顯示尺寸（左側留給人像距離） ──
+  const padL = 80, padR = 36, padT = 40, padB = 50;
   const maxW = W - padL - padR, maxH = H - padT - padB;
-  const ar = actualW / actualH;
-  let dW, dH;
-  if (maxW / maxH > ar) { dH = maxH; dW = dH * ar; }
-  else { dW = maxW; dH = dW / ar; }
-  const sx = padL + (maxW - dW) / 2, sy = padT + (maxH - dH) / 2;
 
-  const glow = ctx.createRadialGradient(sx+dW/2, sy+dH/2, 0, sx+dW/2, sy+dH/2, Math.max(dW,dH)*0.8);
-  glow.addColorStop(0, 'rgba(80,0,160,0.12)');
-  glow.addColorStop(0.4, 'rgba(227,0,27,0.06)');
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  // 以牆壁比例填滿可用區域
+  const wallAR = wallW / wallH;
+  let wW, wH;
+  if (maxW / maxH > wallAR) { wH = maxH; wW = wH * wallAR; }
+  else { wW = maxW; wH = wW / wallAR; }
+  const wx = padL + (maxW - wW) / 2;
+  const wy = padT + (maxH - wH) / 2;
+  const scale = wW / wallW; // px per meter
 
+  // ── 繪製牆壁 ──
+  // 牆壁陰影光暈
+  const wallGlow = ctx.createRadialGradient(wx+wW/2, wy+wH/2, 0, wx+wW/2, wy+wH/2, Math.max(wW,wH)*0.7);
+  wallGlow.addColorStop(0, 'rgba(40,50,80,0.3)');
+  wallGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = wallGlow; ctx.fillRect(0, 0, W, H);
+
+  // 牆面（灰白色磚牆感）
+  ctx.fillStyle = '#2a2e3a';
+  rRect(wx, wy, wW, wH, 4); ctx.fill();
+
+  // 牆面紋理（細格線）
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 0.5;
+  const brickH = Math.max(8, wH / 12);
+  for (let row = 0; row * brickH < wH; row++) {
+    const y = wy + row * brickH;
+    ctx.beginPath(); ctx.moveTo(wx, y); ctx.lineTo(wx + wW, y); ctx.stroke();
+    const offset = (row % 2) * wW * 0.25;
+    for (let col = -1; col * wW * 0.5 < wW + wW*0.5; col++) {
+      const x = wx + col * wW * 0.5 + offset;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + brickH); ctx.stroke();
+    }
+  }
+
+  // 牆壁外框
+  ctx.strokeStyle = 'rgba(74,158,255,0.35)'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); rRect(wx, wy, wW, wH, 4); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── LED 螢幕位置（牆壁中央） ──
+  const dW = actualW * scale;
+  const dH = actualH * scale;
+  const sx = wx + (wW - dW) / 2;
+  const sy = wy + (wH - dH) / 2;
+
+  // 螢幕尺寸超過牆壁警告
+  const overW = actualW > wallW, overH = actualH > wallH;
+  if (overW || overH) {
+    ctx.fillStyle = 'rgba(245,200,66,0.9)';
+    ctx.font = 'bold 13px "Segoe UI"'; ctx.textAlign = 'center';
+    ctx.fillText(`⚠ 螢幕${overW?'寬':'高'}度超過牆壁，請調整尺寸`, W/2, wy + wH/2);
+  }
+
+  // 螢幕光暈
+  const sGlow = ctx.createRadialGradient(sx+dW/2, sy+dH/2, 0, sx+dW/2, sy+dH/2, Math.max(dW,dH)*0.9);
+  sGlow.addColorStop(0, 'rgba(100,40,200,0.25)');
+  sGlow.addColorStop(0.5, 'rgba(227,0,27,0.08)');
+  sGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sGlow; ctx.fillRect(wx, wy, wW, wH);
+
+  // 螢幕本體
   const scG = ctx.createLinearGradient(sx, sy, sx+dW, sy+dH);
   scG.addColorStop(0, '#12003a'); scG.addColorStop(0.5, '#001630'); scG.addColorStop(1, '#0a1200');
-  ctx.fillStyle = scG; rRect(sx, sy, dW, dH, 4); ctx.fill();
+  ctx.fillStyle = scG; rRect(sx, sy, dW, dH, 3); ctx.fill();
 
   const ig = ctx.createRadialGradient(sx+dW*0.3, sy+dH*0.3, 0, sx+dW*0.3, sy+dH*0.3, dW*0.7);
   ig.addColorStop(0, 'rgba(120,80,255,0.18)'); ig.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = ig; rRect(sx, sy, dW, dH, 4); ctx.fill();
+  ctx.fillStyle = ig; rRect(sx, sy, dW, dH, 3); ctx.fill();
 
+  // 模組格線
   const cW = dW / modsH, cH = dH / modsV;
-  ctx.save(); ctx.beginPath(); rRect(sx, sy, dW, dH, 4); ctx.clip();
-  ctx.strokeStyle = 'rgba(255,255,255,0.13)'; ctx.lineWidth = 0.5;
+  ctx.save(); ctx.beginPath(); rRect(sx, sy, dW, dH, 3); ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 0.5;
   for (let i = 1; i < modsH; i++) { const x=sx+i*cW; ctx.beginPath(); ctx.moveTo(x,sy); ctx.lineTo(x,sy+dH); ctx.stroke(); }
   for (let j = 1; j < modsV; j++) { const y=sy+j*cH; ctx.beginPath(); ctx.moveTo(sx,y); ctx.lineTo(sx+dW,y); ctx.stroke(); }
-  if (cW > 20 && cH > 20) {
+  if (cW > 18 && cH > 18) {
     const dx2 = cW / Math.min(model.mW, 8), dy2 = cH / Math.min(model.mH, 8);
     const cols = ['rgba(255,80,80,0.5)','rgba(80,255,80,0.5)','rgba(80,120,255,0.5)'];
     let ci = 0;
     for (let gx=0;gx<modsH;gx++) for (let gy=0;gy<modsV;gy++)
       for (let px=0;px<Math.min(model.mW,8);px++) for (let py=0;py<Math.min(model.mH,8);py++) {
         ctx.fillStyle = cols[ci++ % 3];
-        ctx.beginPath(); ctx.arc(sx+gx*cW+(px+.5)*dx2, sy+gy*cH+(py+.5)*dy2, Math.max(.5,dx2*.15), 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx+gx*cW+(px+.5)*dx2, sy+gy*cH+(py+.5)*dy2, Math.max(.4,dx2*.15), 0, Math.PI*2); ctx.fill();
       }
   }
   ctx.restore();
 
-  ctx.strokeStyle = 'rgba(227,0,27,0.7)'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); rRect(sx, sy, dW, dH, 4); ctx.stroke();
-
-  const cs = 14; ctx.strokeStyle = '#e3001b'; ctx.lineWidth = 2.5;
+  // 螢幕紅框 + 角落裝飾
+  ctx.strokeStyle = 'rgba(227,0,27,0.8)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); rRect(sx, sy, dW, dH, 3); ctx.stroke();
+  const cs = Math.min(12, dW * 0.08); ctx.strokeStyle = '#e3001b'; ctx.lineWidth = 2;
   drawCorner(sx, sy, cs, 1, 1); drawCorner(sx+dW, sy, cs, -1, 1);
   drawCorner(sx, sy+dH, cs, 1, -1); drawCorner(sx+dW, sy+dH, cs, -1, -1);
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1;
-  const dimY = sy + dH + 22;
-  ctx.beginPath(); ctx.moveTo(sx, dimY); ctx.lineTo(sx+dW, dimY); ctx.stroke();
-  tick(sx, dimY, 'v'); tick(sx+dW, dimY, 'v');
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Segoe UI"'; ctx.textAlign = 'center';
-  ctx.fillText(`${actualW.toFixed(2)} m`, sx+dW/2, dimY-5);
-
-  const dimX = sx - 22;
-  ctx.beginPath(); ctx.moveTo(dimX, sy); ctx.lineTo(dimX, sy+dH); ctx.stroke();
-  tick(dimX, sy, 'h'); tick(dimX, sy+dH, 'h');
-  ctx.save(); ctx.translate(dimX-8, sy+dH/2); ctx.rotate(-Math.PI/2);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Segoe UI"';
-  ctx.fillText(`${actualH.toFixed(2)} m`, 0, 0); ctx.restore();
-
-  const fs1 = Math.max(10, Math.min(20, dW/16));
-  const fs2 = Math.max(9,  Math.min(14, dW/22));
-  ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8; ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `bold ${fs1}px "Segoe UI"`;
+  // ── 螢幕上的文字 ──
+  const fs1 = Math.max(9, Math.min(18, dW/14));
+  const fs2 = Math.max(8, Math.min(12, dW/20));
+  ctx.shadowColor = 'rgba(0,0,0,0.95)'; ctx.shadowBlur = 8; ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.font = `bold ${fs1}px "Segoe UI"`;
   ctx.fillText(`${resW.toLocaleString()} × ${resH.toLocaleString()} px`, sx+dW/2, sy+dH/2-fs1*.4);
   ctx.fillStyle = 'rgba(200,210,255,0.65)'; ctx.font = `${fs2}px "Segoe UI"`;
-  ctx.fillText(`${model.name}  ·  ${series.name}  ·  ${modsH}×${modsV} 模組`, sx+dW/2, sy+dH/2+fs1*.8);
+  ctx.fillText(`${model.name} · ${modsH}×${modsV} 模組`, sx+dW/2, sy+dH/2+fs1*.8);
   ctx.shadowBlur = 0;
 
-  const bw = 74, bh = 22;
-  ctx.fillStyle = 'rgba(227,0,27,0.88)'; rRect(sx+dW-bw-2, sy+2, bw, bh, 5); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 10.5px "Segoe UI"'; ctx.textAlign = 'center';
-  ctx.fillText(`共 ${modsH*modsV} 片`, sx+dW-bw/2-2, sy+2+14);
-
-  const distM = model.pitch, pxPerM = dW / actualW, distPx = distM * pxPerM;
-  if (distPx < sx - 15) {
-    const eyeX = sx - distPx;
-    ctx.strokeStyle = 'rgba(245,200,66,0.6)'; ctx.lineWidth = 1; ctx.setLineDash([5,5]);
-    ctx.beginPath(); ctx.moveTo(sx, sy+dH*.5); ctx.lineTo(eyeX, sy+dH*.5); ctx.stroke();
-    ctx.setLineDash([]);
-    drawPerson(eyeX - 8, sy + dH*.5);
-    ctx.fillStyle = 'rgba(245,200,66,0.85)'; ctx.font = 'bold 10px "Segoe UI"'; ctx.textAlign = 'center';
-    ctx.fillText(`最近 ${distM}m`, eyeX + (sx - eyeX)/2 - 4, sy + dH*.5 - 8);
+  // 模組數 badge
+  const bw = Math.min(74, dW * 0.5), bh = 20;
+  if (bw > 30) {
+    ctx.fillStyle = 'rgba(227,0,27,0.88)'; rRect(sx+dW-bw-2, sy+2, bw, bh, 4); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(9,Math.min(11,bw/7))}px "Segoe UI"`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`共 ${modsH*modsV} 片`, sx+dW-bw/2-2, sy+2+13);
   }
+
+  // ── 尺寸標注：螢幕寬高 ──
+  const dimColor = 'rgba(255,255,255,0.6)';
+  ctx.strokeStyle = dimColor; ctx.lineWidth = 1; ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px "Segoe UI"';
+
+  // 螢幕寬（底部）
+  const sdimY = sy + dH + 14;
+  if (sdimY + 8 < wy + wH + 30) {
+    ctx.beginPath(); ctx.moveTo(sx, sdimY); ctx.lineTo(sx+dW, sdimY); ctx.stroke();
+    tick(sx, sdimY, 'v'); tick(sx+dW, sdimY, 'v');
+    ctx.textAlign = 'center';
+    ctx.fillText(`${actualW.toFixed(2)} m`, sx+dW/2, sdimY-4);
+  }
+
+  // 螢幕高（左側）
+  const sdimX = sx - 16;
+  if (sdimX > wx + 5) {
+    ctx.beginPath(); ctx.moveTo(sdimX, sy); ctx.lineTo(sdimX, sy+dH); ctx.stroke();
+    tick(sdimX, sy, 'h'); tick(sdimX, sy+dH, 'h');
+    ctx.save(); ctx.translate(sdimX-7, sy+dH/2); ctx.rotate(-Math.PI/2);
+    ctx.textAlign = 'center'; ctx.font = 'bold 11px "Segoe UI"'; ctx.fillStyle = '#fff';
+    ctx.fillText(`${actualH.toFixed(2)} m`, 0, 0); ctx.restore();
+  }
+
+  // ── 牆壁尺寸標注（外側虛線） ──
+  ctx.strokeStyle = 'rgba(74,158,255,0.5)'; ctx.fillStyle = '#4a9eff';
+  ctx.font = 'bold 11px "Segoe UI"';
+
+  // 牆壁寬（上方）
+  const wdimY = wy - 14;
+  ctx.beginPath(); ctx.moveTo(wx, wdimY); ctx.lineTo(wx+wW, wdimY); ctx.stroke();
+  tick(wx, wdimY, 'v'); tick(wx+wW, wdimY, 'v');
+  ctx.textAlign = 'center';
+  ctx.fillText(`牆壁 ${wallW.toFixed(1)} m`, wx+wW/2, wdimY-4);
+
+  // 牆壁高（右側）
+  const wdimX = wx + wW + 14;
+  ctx.beginPath(); ctx.moveTo(wdimX, wy); ctx.lineTo(wdimX, wy+wH); ctx.stroke();
+  tick(wdimX, wy, 'h'); tick(wdimX, wy+wH, 'h');
+  ctx.save(); ctx.translate(wdimX+7, wy+wH/2); ctx.rotate(Math.PI/2);
+  ctx.textAlign = 'center'; ctx.font = 'bold 11px "Segoe UI"'; ctx.fillStyle = '#4a9eff';
+  ctx.fillText(`牆壁 ${wallH.toFixed(1)} m`, 0, 0); ctx.restore();
+
+  // ── 人像 + 觀賞距離 ──
+  // 人像永遠站在「螢幕左邊緣 - 觀賞距離」的位置
+  const distM = model.pitch;
+  const personH_m = 1.75;
+  const personPx = Math.max(20, personH_m * scale); // 最小 20px 確保看得到
+  const footX = sx - distM * scale;           // 距離螢幕表面 distM 公尺
+  const footY = wy + wH;                       // 站在牆底部（地板）
+
+  // 觀賞距離虛線：從螢幕左緣 → 人像
+  const lineY = sy + dH * 0.52;
+  ctx.strokeStyle = 'rgba(245,200,66,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([5,5]);
+  ctx.beginPath(); ctx.moveTo(sx, lineY); ctx.lineTo(Math.max(footX + 5, 8), lineY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 距離標注 Pill
+  const midLineX = sx - (distM * scale) / 2;
+  const pillW = 70, pillH = 18;
+  ctx.fillStyle = 'rgba(245,200,66,0.92)';
+  rRect(midLineX - pillW/2, lineY - pillH - 2, pillW, pillH, 9); ctx.fill();
+  ctx.fillStyle = '#1a1400'; ctx.font = 'bold 10px "Segoe UI"'; ctx.textAlign = 'center';
+  ctx.fillText(`≥ ${distM} m`, midLineX, lineY - pillH/2 + 2);
+
+  // 人像：若在 canvas 內就畫，否則縮小後貼左側
+  const drawX = Math.max(footX, 8 + personPx * 0.25);
+  drawHumanSilhouette(drawX, footY, personPx, personH_m);
+}
+
+// ── 真實人形剪影（ViewSonic 風格）─────────────────────────────
+function drawHumanSilhouette(footX, footY, heightPx, heightM) {
+  ctx.save();
+  const h = heightPx;
+  const cx = footX;
+  const col = 'rgba(180, 210, 245, 0.92)'; // 淺藍色，類 ViewSonic
+
+  // 比例定義（以 h 為全身高）
+  const headR  = h * 0.075;
+  const headCY = footY - h + headR;
+  const neckY  = footY - h * 0.84;
+  const shlY   = footY - h * 0.78;  // 肩膀 Y
+  const shlW   = h * 0.18;          // 肩寬
+  const chestY = footY - h * 0.60;
+  const waistY = footY - h * 0.50;
+  const waistW = h * 0.12;
+  const hipY   = footY - h * 0.46;
+  const hipW   = h * 0.15;
+  const kneeY  = footY - h * 0.26;
+  const kneeW  = h * 0.05;
+
+  ctx.fillStyle = col;
+  ctx.strokeStyle = col;
+  ctx.lineJoin = 'round';
+  ctx.lineCap  = 'round';
+
+  // 頭
+  ctx.beginPath(); ctx.arc(cx, headCY, headR, 0, Math.PI * 2); ctx.fill();
+
+  // 頸 + 軀幹（一個填充多邊形）
+  ctx.beginPath();
+  ctx.moveTo(cx - headR * 0.5, neckY);
+  ctx.lineTo(cx - shlW, shlY);
+  ctx.bezierCurveTo(cx - shlW, chestY, cx - waistW, chestY, cx - waistW, waistY);
+  ctx.lineTo(cx - hipW, hipY);
+  ctx.lineTo(cx + hipW, hipY);
+  ctx.lineTo(cx + waistW, waistY);
+  ctx.bezierCurveTo(cx + waistW, chestY, cx + shlW, chestY, cx + shlW, shlY);
+  ctx.lineTo(cx + headR * 0.5, neckY);
+  ctx.closePath(); ctx.fill();
+
+  // 左手臂
+  ctx.lineWidth = h * 0.055;
+  ctx.beginPath();
+  ctx.moveTo(cx - shlW, shlY + h * 0.02);
+  ctx.quadraticCurveTo(cx - shlW * 1.35, chestY, cx - shlW * 1.1, waistY - h * 0.05);
+  ctx.stroke();
+
+  // 右手臂
+  ctx.beginPath();
+  ctx.moveTo(cx + shlW, shlY + h * 0.02);
+  ctx.quadraticCurveTo(cx + shlW * 1.35, chestY, cx + shlW * 1.1, waistY - h * 0.05);
+  ctx.stroke();
+
+  // 左腿
+  ctx.lineWidth = h * 0.07;
+  ctx.beginPath();
+  ctx.moveTo(cx - hipW * 0.55, hipY);
+  ctx.quadraticCurveTo(cx - hipW * 0.7, kneeY, cx - hipW * 0.55, footY);
+  ctx.stroke();
+
+  // 右腿
+  ctx.beginPath();
+  ctx.moveTo(cx + hipW * 0.55, hipY);
+  ctx.quadraticCurveTo(cx + hipW * 0.7, kneeY, cx + hipW * 0.55, footY);
+  ctx.stroke();
+
+  // 身高指示線（右側）
+  const lineX = cx + shlW * 1.6;
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(180,210,245,0.5)';
+  ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(lineX, footY - h); ctx.lineTo(lineX, footY); ctx.stroke();
+  ctx.setLineDash([]);
+  // 上下端橫線
+  ctx.beginPath(); ctx.moveTo(lineX - 4, footY - h); ctx.lineTo(lineX + 4, footY - h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lineX - 4, footY);     ctx.lineTo(lineX + 4, footY);     ctx.stroke();
+
+  // 身高標籤 Pill
+  const labelH = heightM ? `${(heightM * 100).toFixed(0)} cm` : '175 cm';
+  const pillW2 = 44, pillH2 = 16;
+  ctx.fillStyle = 'rgba(180,210,245,0.22)';
+  rRect(lineX + 5, footY - h/2 - pillH2/2, pillW2, pillH2, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(180,210,245,0.95)';
+  ctx.font = `bold ${Math.max(8, Math.min(11, h * 0.09))}px "Segoe UI"`;
+  ctx.textAlign = 'left';
+  ctx.fillText(labelH, lineX + 8, footY - h/2 + 4);
+
+  ctx.restore();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
