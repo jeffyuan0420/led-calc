@@ -181,19 +181,33 @@ header {
 .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #080a0f; }
 .canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 #cvs { display: block; }
+/* 上傳圖片按鈕（右上角浮動） */
+.upload-btn-wrap { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 7px; align-items: center; }
+.upload-btn { padding: 6px 13px; border-radius: 7px; cursor: pointer; font-size: 11px; font-weight: 700; border: 1px solid rgba(255,255,255,0.18); background: rgba(20,24,36,0.82); color: #c8d4f0; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(6px); transition: all 0.18s; white-space: nowrap; }
+.upload-btn:hover { background: rgba(40,50,80,0.92); border-color: rgba(74,158,255,0.5); color: #fff; }
+.upload-btn.reset { border-color: rgba(227,0,27,0.35); color: #f08090; }
+.upload-btn.reset:hover { background: rgba(80,10,20,0.85); border-color: rgba(227,0,27,0.7); color: #ff8090; }
+#fileInput { display: none; }
 
 /* results bar — 改善可讀性 */
 .results-bar { background: var(--card); border-top: 1px solid var(--border); padding: 14px 20px; flex-shrink: 0; }
 .results-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-.result-item { text-align: center; padding: 0 6px; border-right: 1px solid var(--border); }
+.result-item { text-align: center; padding: 0 6px; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .result-item:last-child { border-right: none; }
-.r-val { font-size: 17px; font-weight: 800; color: #e8ecf4; line-height: 1.1; margin-bottom: 4px; }
-.r-val.red { color: #ff4455; }
-.r-val.yellow { color: var(--yellow); }
-.r-val.green { color: var(--green); }
-.r-val.blue { color: var(--blue); }
+.r-val { font-size: 18px; font-weight: 900; color: #e8ecf4; line-height: 1.1; margin-bottom: 5px; letter-spacing: -0.3px; }
+.r-val.red {
+  color: #fff;
+  background: linear-gradient(135deg, #c8000f 0%, #ff2235 100%);
+  padding: 4px 11px; border-radius: 6px;
+  font-size: 19px;
+  box-shadow: 0 2px 12px rgba(227,0,27,0.5);
+  display: inline-block;
+}
+.r-val.yellow { color: #ffe066; font-size: 18px; text-shadow: 0 0 12px rgba(245,200,66,0.5); }
+.r-val.green  { color: #4dffc3; font-size: 18px; text-shadow: 0 0 12px rgba(52,211,153,0.4); }
+.r-val.blue   { color: #7dc8ff; font-size: 18px; text-shadow: 0 0 12px rgba(74,158,255,0.4); }
 /* 改善 result label 可讀性 */
-.r-lbl { font-size: 9.5px; color: #8a96b0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+.r-lbl { font-size: 10px; color: #8a96b0; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-top: 2px; }
 
 /* ─── MODAL ──────────────────────────────────────────────────── */
 .modal-overlay {
@@ -508,6 +522,16 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   <div class="right-panel">
     <div class="canvas-wrap" id="canvasWrap">
       <canvas id="cvs"></canvas>
+      <!-- 上傳圖片浮動按鈕 -->
+      <div class="upload-btn-wrap">
+        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+          🖼 <span data-zh="上傳背景圖" data-en="Upload Image">上傳背景圖</span>
+        </button>
+        <button class="upload-btn reset" id="resetImgBtn" onclick="resetBgImage()" style="display:none">
+          ✕ <span data-zh="移除圖片" data-en="Remove Image">移除圖片</span>
+        </button>
+        <input type="file" id="fileInput" accept="image/*" onchange="handleImageUpload(event)">
+      </div>
     </div>
     <div class="results-bar">
       <div class="results-grid">
@@ -730,6 +754,42 @@ function setVolt(v, btn) {
 }
 let lastCalc = {};
 
+// ── 背景圖片 ──────────────────────────────────────────────────
+let bgImage = null;
+let bgImageLoaded = false;
+
+// 預設極光風景圖（Unsplash 免費圖，極光/山脈）
+const DEFAULT_BG_URL = 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1200&q=80';
+const defaultBgImg = new Image();
+defaultBgImg.crossOrigin = 'anonymous';
+defaultBgImg.src = DEFAULT_BG_URL;
+defaultBgImg.onload = () => { bgImage = defaultBgImg; bgImageLoaded = true; calc(); };
+defaultBgImg.onerror = () => { bgImage = null; bgImageLoaded = false; };
+
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      bgImage = img; bgImageLoaded = true;
+      document.getElementById('resetImgBtn').style.display = 'flex';
+      calc();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function resetBgImage() {
+  bgImage = defaultBgImg;
+  bgImageLoaded = defaultBgImg.complete;
+  document.getElementById('resetImgBtn').style.display = 'none';
+  calc();
+}
+
 // ── CANVAS ────────────────────────────────────────────────────
 const cvs = document.getElementById('cvs');
 const ctx = cvs.getContext('2d');
@@ -917,21 +977,38 @@ function draw(modsH, modsV, actualW, actualH, model, series, resW, resH, wallW, 
   ctx.fillStyle = sGlow; ctx.fillRect(wx, wy, wW, wH);
 
   // 螢幕本體
-  const scG = ctx.createLinearGradient(sx, sy, sx+dW, sy+dH);
-  scG.addColorStop(0, '#12003a'); scG.addColorStop(0.5, '#001630'); scG.addColorStop(1, '#0a1200');
-  ctx.fillStyle = scG; rRect(sx, sy, dW, dH, 3); ctx.fill();
-
-  const ig = ctx.createRadialGradient(sx+dW*0.3, sy+dH*0.3, 0, sx+dW*0.3, sy+dH*0.3, dW*0.7);
-  ig.addColorStop(0, 'rgba(120,80,255,0.18)'); ig.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = ig; rRect(sx, sy, dW, dH, 3); ctx.fill();
-
-  // 模組格線
-  const cW = dW / modsH, cH = dH / modsV;
   ctx.save(); ctx.beginPath(); rRect(sx, sy, dW, dH, 3); ctx.clip();
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 0.5;
+
+  if (bgImageLoaded && bgImage) {
+    // 背景圖：cover 模式（置中裁切填滿螢幕）
+    const ir = bgImage.width / bgImage.height;
+    const sr = dW / dH;
+    let iw, ih, ix, iy;
+    if (ir > sr) { ih = dH; iw = ih * ir; ix = sx - (iw - dW)/2; iy = sy; }
+    else { iw = dW; ih = iw / ir; ix = sx; iy = sy - (ih - dH)/2; }
+    ctx.drawImage(bgImage, ix, iy, iw, ih);
+    // 螢幕感：輕微暗化 + 色調疊加，模擬 LED 顯示
+    ctx.fillStyle = 'rgba(0,0,10,0.28)'; ctx.fillRect(sx, sy, dW, dH);
+    const tintG = ctx.createLinearGradient(sx, sy, sx+dW, sy+dH);
+    tintG.addColorStop(0, 'rgba(20,0,60,0.15)');
+    tintG.addColorStop(1, 'rgba(0,20,10,0.15)');
+    ctx.fillStyle = tintG; ctx.fillRect(sx, sy, dW, dH);
+  } else {
+    // 無圖時的原始漸層背景
+    const scG = ctx.createLinearGradient(sx, sy, sx+dW, sy+dH);
+    scG.addColorStop(0, '#12003a'); scG.addColorStop(0.5, '#001630'); scG.addColorStop(1, '#0a1200');
+    ctx.fillStyle = scG; ctx.fillRect(sx, sy, dW, dH);
+    const ig = ctx.createRadialGradient(sx+dW*0.3, sy+dH*0.3, 0, sx+dW*0.3, sy+dH*0.3, dW*0.7);
+    ig.addColorStop(0, 'rgba(120,80,255,0.18)'); ig.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ig; ctx.fillRect(sx, sy, dW, dH);
+  }
+
+  // 模組格線（疊在圖片上）
+  const cW = dW / modsH, cH = dH / modsV;
+  ctx.strokeStyle = bgImageLoaded ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.15)'; ctx.lineWidth = 0.5;
   for (let i = 1; i < modsH; i++) { const x=sx+i*cW; ctx.beginPath(); ctx.moveTo(x,sy); ctx.lineTo(x,sy+dH); ctx.stroke(); }
   for (let j = 1; j < modsV; j++) { const y=sy+j*cH; ctx.beginPath(); ctx.moveTo(sx,y); ctx.lineTo(sx+dW,y); ctx.stroke(); }
-  if (cW > 18 && cH > 18) {
+  if (!bgImageLoaded && cW > 18 && cH > 18) {
     const dx2 = cW / Math.min(model.mW, 8), dy2 = cH / Math.min(model.mH, 8);
     const cols = ['rgba(255,80,80,0.5)','rgba(80,255,80,0.5)','rgba(80,120,255,0.5)'];
     let ci = 0;
